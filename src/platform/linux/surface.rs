@@ -16,6 +16,7 @@ use texturegl::Texture;
 use euclid::size::Size2D;
 use libc::{c_int, c_uint, c_void};
 use glx;
+use gleam::gl;
 use skia::gl_context::{GLContext, PlatformDisplayData};
 use skia::gl_rasterization_context::GLRasterizationContext;
 use std::ascii::AsciiExt;
@@ -197,6 +198,7 @@ impl PixmapNativeSurface {
         //
         // FIXME(pcwalton): RAII for exception safety?
         unsafe {
+/*
             let pixmap_attributes = [
                 glx::TEXTURE_TARGET_EXT as i32, glx::TEXTURE_2D_EXT as i32,
                 glx::TEXTURE_FORMAT_EXT as i32, glx::TEXTURE_FORMAT_RGBA_EXT as i32,
@@ -222,6 +224,22 @@ impl PixmapNativeSurface {
 
             // FIXME(pcwalton): Recycle these for speed?
             glx::DestroyPixmap(glx_display, glx_pixmap);
+*/
+            let dpy = mem::transmute(display.display);
+            let xim = xlib::XGetImage(dpy, self.pixmap,
+                                      0, 0, self.size.width as u32, self.size.height as u32,
+                                      xlib::XAllPlanes(), xlib::ZPixmap);
+            let _bound = texture.bind();
+            gl::TexImage2D(gl::TEXTURE_2D,
+                           0,
+                           gl::RGBA as i32,
+                           self.size.width,
+                           self.size.height,
+                           0,
+                           gl::BGRA as u32,
+                           gl::UNSIGNED_BYTE,
+                           (*xim).data as *const c_void);
+            xlib::XDestroyImage(xim);
         }
     }
 
